@@ -1,16 +1,21 @@
+set(VCPKG_BUILD_TYPE release)
+
 vcpkg_from_github(
-  OUT_SOURCE_PATH SOURCE_PATH
-  REPO alexames/luawrapper
-  REF e5b559eef6e54f1542749a68ed4d8b1cb7b6163d
-  SHA512 c9096cc111f18791981f0845fb12cb3627c804f4ac85d54fe7f3d4d9b417e1fff1e7ea1d2b0f87e369064abe28a2bb0ea7b7453164f3609361bbda0048c389e5
-  HEAD_REF experimental
+    OUT_SOURCE_PATH SOURCE_PATH
+    REPO alexames/luawrapper
+    REF 3708177b0916900bf3a2ebeafa67dd19ced49436
+    SHA512 ea037543a224d629bd9c55204c4c8c828525d751574c3cb294e1bbc6eaeaae1369db3c2e9dc6005617408f23531f1871064c7a1ed40ba1eaf77c364a06521ed8
+    HEAD_REF experimental
 )
 
 vcpkg_configure_cmake(
   SOURCE_PATH "${SOURCE_PATH}"
+  PREFER_NINJA
 )
 vcpkg_install_cmake()
 vcpkg_fixup_cmake_targets()
+
+file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
 
 file(
   INSTALL "${SOURCE_PATH}/LICENSE"
