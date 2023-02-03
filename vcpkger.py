@@ -6,20 +6,44 @@
 # in the article.
 
 from argparse import ArgumentParser
-from os import makedirs
-from os import path
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import hashlib
 import json
+import os
+import re
 import subprocess
 import urllib.request
 
+################################################################################
+# Utiltities
+################################################################################
 
 def safeOpen(path, mode):
-    ''' Open "path" for writing, creating any parent directories as needed.'''
-    makedirs(path.parent, exist_ok=True)
+    ''' Open `path` for writing, creating any parent directories as needed.'''
+    os.makedirs(path.parent, exist_ok=True)
     return open(path, mode)
+
+
+class jsonOpen:
+  def __init__(self, filename):
+    self.filename = filename
+   
+  def __enter__(self):
+    try:
+      with safeOpen(self.filename, 'r') as file:
+        try:
+          self.contents = json.load(file)
+        except json.JSONDecodeError:
+          self.contents = {}
+    except FileNotFoundError:
+      self.contents = {}
+    return self.contents
+
+  def __exit__(self, *args):
+    with safeOpen(self.filename, 'w') as file:
+      json.dump(self.contents, file, indent=2)
+
 
 
 def runWithResult(args):
@@ -32,9 +56,19 @@ def errorIfExists(path, errors):
     errors.append(f'{path.name} already exists at {path.relative_to(Path.cwd())}')
 
 
+def errorIfDoesNotExists(path, errors):
+  if path.exists():
+    errors.append(f'Expected file {path.name} at {path.relative_to(Path.cwd())}')
+
+
+################################################################################
+# VcPkg file content management
+################################################################################
+
+
 def createPortFileCMake(filename, github_repo, ref, sha, branch):
-  with safeOpen(filename, 'w') as out:
-    out.write(f'''vcpkg_from_github(
+  with safeOpen(filename, 'w') as file:
+    file.write(f'''vcpkg_from_github(
   OUT_SOURCE_PATH SOURCE_PATH
   REPO {github_repo}
   REF {ref}
@@ -58,28 +92,52 @@ file(
 ''')
 
 
-def createVcPkgJson(filename, portname, description, github_repo):
-  with safeOpen(filename, 'w') as out:
-    out.write(f'''{{
+def updatePortFileCMake(filename, github_repo, commit_hash, sha512, branch):
+  with safeOpen(filename, 'r') as file:
+    contents = file.read()
+  # Because there are no nested function calls in CMake script, we can easily
+  # extract the call to vcpkg_from_github along with all of its arguments.
+  vcpkg_from_github = re.search(r'vcpkg_from_github\([^)]*\)', contents).group(0)
+  # Now update the arguments with the new values.
+  updates = {
+    'REF': commit_hash,
+    'SHA512': sha512,
+    'HEAD_REF': branch,
+  }
+  for key, value in updates.items():
+    vcpkg_from_github = re.sub(
+        f'(\\s){key} \\S*',
+        f'\\1{key} {value}',
+        vcpkg_from_github)
+  # Place the updated call to vcpkg_from_github back in the script and write it
+  # back out.
+  contents = re.sub(r'vcpkg_from_github\([^)]*\)', vcpkg_from_github, contents)
+  with safeOpen(filename, 'w') as file:
+    file.write(contents)
+
+
+def createVcPkgJson(filename, portname, version, description, github_repo):
+  with safeOpen(filename, 'w') as file:
+    file.write(f'''{{
   "name": "{portname}",
-  "version": "1.0.0",
+  "version": "{version}",
   "description": "{description}",
   "homepage": "https://github.com/{github_repo}"
 }}
 ''')
 
 
-def createVersionJson(filename, gitTree):
-  with safeOpen(filename, 'w') as out:
-    out.write(f'''{{
-  "versions": [
-    {{
-      "version": "1.0.0",
-      "git-tree": "{gitTree}"
-    }}
-  ]
-}}
-''')
+def updateVcPkgJson(filename, version):
+  with jsonOpen(filename) as jsonContents:
+    if jsonContents['version-semver']:
+      jsonContents['version-semver'] = version
+    else:
+      jsonContents['version'] = version
+
+def updateVersionJson(filename, git_tree, version):
+  with jsonOpen(filename) as jsonContents:
+    versions = jsonContents.setdefault('versions', [])
+    versions.append({'git-tree': git_tree, 'version': version})
 
 
 def generateSHA512(github_repo, commit_hash, github_token):
@@ -92,28 +150,33 @@ def generateSHA512(github_repo, commit_hash, github_token):
   return hash.hexdigest()
 
 
-def updateBaseline(filename, portname, baseline, portVersion):
-  with safeOpen(filename, 'r') as file:
-    try:
-      jsonContents = json.load(file)
-    except json.JSONDecodeError:
-      jsonContents = {}
-  
-  default = jsonContents.setdefault('default', {})
-  default[portname] = {'baseline': baseline, 'port-version': portVersion}
-
-  with safeOpen(filename, 'w') as file:
-    json.dump(jsonContents, file, indent=2)
+def updateBaseline(filename, portname, baseline, port_version):
+  with jsonOpen(filename) as jsonContents:
+    default = jsonContents.setdefault('default', {})
+    default[portname] = {'baseline': baseline, 'port-version': port_version}
 
 
-def printSuccess(gitTree, repository, portname):
+################################################################################
+# Main flow
+################################################################################
+
+def printSuccess(portname):
+  baseline = runWithResult(['git', 'rev-parse', 'HEAD'])
+  origin = runWithResult(['git', 'remote', 'get-url', 'origin'])
+  if origin.startswith('error:'):
+    repository = 'https://github.com/my-username/my-vcpkg-registry'
+  elif origin.startswith('git@github.com:'):
+    registryUsernameAndProject = origin[len('git@github.com:'):-len('.git')]
+    repository = f'https://github.com/{registryUsernameAndProject}'
+  else:
+    repository = origin
   print(f'''New port successful.
 Update your project's vcpkg-configuration.json to look like the following:
 {{
   "registries": [
     {{
       "kind": "git",
-      "baseline": "{gitTree}",
+      "baseline": "{baseline}",
       "repository": "{repository}",
       "packages": [
         ...
@@ -126,13 +189,22 @@ Update your project's vcpkg-configuration.json to look like the following:
 ''')
 
 
-def createPort(registry, portname, commit_hash, github_repo, description, branch, github_token, force):
+def createPort(*,
+               registry_path,
+               portname,
+               commit_hash,
+               github_repo,
+               description,
+               branch,
+               version,
+               github_token,
+               force):
   print(f'Attempting to create port {portname}...')
 
-  portFolder = registry/'ports'/portname
+  portFolder = registry_path/'ports'/portname
   portFileCMake = portFolder/'portfile.cmake'
   vcpkgJson = portFolder/'vcpkg.json'
-  versionJson = registry/'versions'/f'{portname[0]}-'/f'{portname}.json'
+  versionJson = registry_path/'versions'/f'{portname[0]}-'/f'{portname}.json'
 
   # Validate that the port doesn't already exist.
   if not force:
@@ -144,37 +216,83 @@ def createPort(registry, portname, commit_hash, github_repo, description, branch
       return errors
 
   # Create and update port folder.
-
   sha512 = generateSHA512(github_repo, commit_hash, github_token)
   createPortFileCMake(portFileCMake, github_repo, commit_hash, sha512, branch)
-  createVcPkgJson(vcpkgJson, portname, description, github_repo)
+  createVcPkgJson(vcpkgJson, portname, version, description, github_repo)
 
   # Prep the dummy commit.
   runWithResult(['git', 'add', f'ports/{portname}'])
   runWithResult(['git', 'commit', '-m', f'[{portname}] new port'])
-  gitTree = runWithResult(['git', 'rev-parse', f'HEAD:ports/{portname}'])
+  baseline = runWithResult(['git', 'rev-parse', f'HEAD:ports/{portname}'])
 
   # Update the version information.
-  createVersionJson(versionJson, gitTree)
-  baselineJson = registry/'versions'/'baseline.json'
-  updateBaseline(baselineJson, portname, '1.0.0', 0)
+  updateVersionJson(versionJson, baseline, version)
+  baselineJson = registry_path/'versions'/'baseline.json'
+  updateBaseline(baselineJson, portname, version, 0)
 
   # Finish off the commit.
   runWithResult(['git', 'add', 'versions'])
   runWithResult(['git', 'commit', '--amend', '--no-edit'])
 
   # Finally, display a helpful message.
-  gitTree = runWithResult(['git', 'rev-parse', 'HEAD'])
-  origin = runWithResult(['git', 'remote', 'get-url', 'origin'])
+  printSuccess(portname)
 
-  if origin.startswith('error:'):
-    repository = 'https://github.com/my-username/my-vcpkg-registry'
-  elif origin.startswith('git@github.com:'):
-    registryUsernameAndProject = origin[len('git@github.com:'):-len('.git')]
-    repository = f'https://github.com/{registryUsernameAndProject}'
+
+def updatePort(*,
+               registry_path,
+               portname,
+               commit_hash,
+               github_repo,
+               branch,
+               version,
+               port_version,
+               github_token,
+               force):
+
+  portFolder = registry_path/'ports'/portname
+  portFileCMake = portFolder/'portfile.cmake'
+  vcpkgJson = portFolder/'vcpkg.json'
+  versionJson = registry_path/'versions'/f'{portname[0]}-'/f'{portname}.json'
+
+  # Ensure files exist
+  if not force:
+    errors = []
+    errorIfDoesNotExists(portFileCMake, errors)
+    errorIfDoesNotExists(vcpkgJson, errors)
+    errorIfDoesNotExists(versionJson, errors)
+    if errors:
+      return errors
+
+  # Update port folder.
+  sha512 = generateSHA512(github_repo, commit_hash, github_token)
+  updatePortFileCMake(portFileCMake, github_repo, commit_hash, sha512, branch)
+  updateVcPkgJson(vcpkgJson, version)
+
+  # Prep the dummy commit.
+  runWithResult(['git', 'add', f'ports/{portname}'])
+  if int(port_version) > 0:
+    port_version_message = f", port version {port_version}"
   else:
-    repository = origin
-  printSuccess(gitTree, repository, portname)
+    port_version_message = ""
+  runWithResult(['git', 'commit', '-m', f'[{portname}] Updated port to v{version}{port_version_message}'])
+  baseline = runWithResult(['git', 'rev-parse', f'HEAD:ports/{portname}'])
+
+  # Update the version information.
+  updateVersionJson(versionJson, baseline, version)
+  baselineJson = registry_path/'versions'/'baseline.json'
+  updateBaseline(baselineJson, portname, version, port_version)
+
+  # Finish off the commit.
+  runWithResult(['git', 'add', 'versions'])
+  runWithResult(['git', 'commit', '--amend', '--no-edit'])
+
+  # Finally, display a helpful message.
+  printSuccess(portname)
+
+
+################################################################################
+# Entry point
+################################################################################
 
 
 def parseArguments():
@@ -191,6 +309,11 @@ def parseArguments():
       'portname',
       help='The name of the port to update or create')
   parser.add_argument(
+      '--registry-path',
+      required=False,
+      default=Path.cwd(),
+      help='Bypass errors that can be skipped')
+  parser.add_argument(
       '--commit-hash',
       help='The hash to update to')
   parser.add_argument(
@@ -198,26 +321,32 @@ def parseArguments():
       required=False,
       help='The github username and project of the port (e.g.: \'example/myproject\')')
   parser.add_argument(
+      '--description',
+      required=False,
+      help='A description of the port')
+  parser.add_argument(
       '--branch',
       required=False,
       default='main',
       help='A description of the port')
   parser.add_argument(
-      '--description',
+      '--version',
       required=False,
+      default='1.0.0',
       help='A description of the port')
+  parser.add_argument(
+      '--port-version',
+      required=False,
+      default=0,
+      type=int,
+      help='A description of the port')
+  parser.add_argument(
+      '--github-token',
+      required=False,
+      help='Bypass errors that can be skipped')
   parser.add_argument(
       '--force',
       action='store_true',
-      required=False,
-      help='Bypass errors that can be skipped')
-  parser.add_argument(
-      '--vcpkg-registry',
-      required=False,
-      default=Path.cwd(),
-      help='Bypass errors that can be skipped')
-  parser.add_argument(
-      '--github-token',
       required=False,
       help='Bypass errors that can be skipped')
 
@@ -230,22 +359,32 @@ def main():
   args = parseArguments()
   if args.action == 'create':
     errors = createPort(
-        args.vcpkg_registry,
-        args.portname,
-        args.commit_hash,
-        args.github_repo,
-        args.description,
-        args.branch,
-        args.github_token,
-        args.force)
-    if errors:
-      print(f'The following {"error" if len(errors)==1 else "errors"} occured:')
-      for error in errors:
-        print(f' *\t{error}')
-      print('Resolve these errors and retry.')
+        registry_path = args.registry_path,
+        portname =      args.portname,
+        commit_hash =   args.commit_hash,
+        github_repo =   args.github_repo,
+        description =   args.description,
+        branch =        args.branch,
+        version =       args.version,
+        github_token =  args.github_token,
+        force =         args.force)
+  elif args.action == 'update':
+    errors = updatePort(
+        registry_path = args.registry_path,
+        portname =      args.portname,
+        commit_hash =   args.commit_hash,
+        github_repo =   args.github_repo,
+        branch =        args.branch,
+        version =       args.version,
+        port_version =  args.port_version,
+        github_token =  args.github_token,
+        force =         args.force)
+  if errors:
+    print(f'The following {"error" if len(errors)==1 else "errors"} occured:')
+    for error in errors:
+      print(f' *\t{error}')
+    print('Resolve these errors and retry.')
 
-  # elif args.action == 'update':
-  #   updatePort(args.portname, args.hash)
 
 
 if __name__ == "__main__":
