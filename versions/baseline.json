@@ -11,6 +11,10 @@
     "luawrapper": {
       "baseline": "0.0.2",
       "port-version": 0
+    },
+    "flicks": {
+      "baseline": "1.0.0",
+      "port-version": 0
     }
   }
 }
