@@ -9,7 +9,7 @@
       "port-version": 1
     },
     "luawrapper": {
-      "baseline": "0.0.2",
+      "baseline": "0.0.3",
       "port-version": 0
     },
     "flicks": {
