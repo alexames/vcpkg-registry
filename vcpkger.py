@@ -57,7 +57,7 @@ def errorIfExists(path, errors):
 
 
 def errorIfDoesNotExists(path, errors):
-  if path.exists():
+  if not path.exists():
     errors.append(f'Expected file {path.name} at {path.relative_to(Path.cwd())}')
 
 
