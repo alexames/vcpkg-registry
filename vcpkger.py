@@ -289,6 +289,39 @@ def updatePort(*,
   # Finally, display a helpful message.
   printSuccess(portname)
 
+def printRegistries():
+  baseline = runWithResult(['git', 'rev-parse', 'HEAD'])
+  origin = runWithResult(['git', 'remote', 'get-url', 'origin'])
+  if origin.startswith('error:'):
+    repository = 'https://github.com/my-username/my-vcpkg-registry'
+  elif origin.startswith('git@github.com:'):
+    registryUsernameAndProject = origin[len('git@github.com:'):-len('.git')]
+    repository = f'https://github.com/{registryUsernameAndProject}'
+  else:
+    repository = origin
+
+  portnameList = []
+  for entry in os.scandir('ports'):
+    portnameList.append(f'"{entry.name}"')
+  sep = ',\n        '
+  portnames = sep.join(portnameList)
+
+  print(f'''
+{{
+  "registries": [
+    {{
+      "kind": "git",
+      "baseline": "{baseline}",
+      "repository": "{repository}",
+      "packages": [
+        {portnames}
+      ]
+    }}
+  ]
+}}
+''')
+
+
 
 ################################################################################
 # Entry point
@@ -303,10 +336,11 @@ def parseArguments():
     epilog='')
   parser.add_argument(
       'action',
-      choices=['create', 'update'],
+      choices=['create', 'update', 'list'],
       help='Whether to create or update a port')
   parser.add_argument(
       'portname',
+      nargs='?',
       help='The name of the port to update or create')
   parser.add_argument(
       '--registry-path',
@@ -379,6 +413,8 @@ def main():
         port_version =  args.port_version,
         github_token =  args.github_token,
         force =         args.force)
+  elif args.action == 'list':
+    errors = printRegistries()
   if errors:
     print(f'The following {"error" if len(errors)==1 else "errors"} occured:')
     for error in errors:
