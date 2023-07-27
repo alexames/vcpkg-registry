@@ -23,6 +23,10 @@
     "imgui-node-editor": {
       "baseline": "1.0.0",
       "port-version": 0
+    },
+    "imgui-file-dialog": {
+      "baseline": "1.88",
+      "port-version": 0
     }
   }
 }
