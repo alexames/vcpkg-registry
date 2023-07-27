@@ -51,6 +51,10 @@ def runWithResult(args):
   return result.stdout.decode('utf-8').strip()
 
 
+def errorIfMisnamed(portname, errors):
+  if portname != portname.lower():
+    errors.append(f'{portname} must be lowercase (ex. {portname.lower()})')
+
 def errorIfExists(path, errors):
   if path.exists():
     errors.append(f'{path.name} already exists at {path.relative_to(Path.cwd())}')
@@ -209,6 +213,7 @@ def createPort(*,
   # Validate that the port doesn't already exist.
   if not force:
     errors = []
+    errorIfMisnamed(portname, errors)
     errorIfExists(portFileCMake, errors)
     errorIfExists(vcpkgJson, errors)
     errorIfExists(versionJson, errors)
@@ -257,6 +262,7 @@ def updatePort(*,
   # Ensure files exist
   if not force:
     errors = []
+    errorIfMisnamed(portname, errors)
     errorIfDoesNotExists(portFileCMake, errors)
     errorIfDoesNotExists(vcpkgJson, errors)
     errorIfDoesNotExists(versionJson, errors)
