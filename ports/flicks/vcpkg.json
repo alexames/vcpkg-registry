@@ -1,6 +1,6 @@
 {
   "name": "flicks",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A unit of time defined in C++.",
   "homepage": "https://github.com/alexames/Flicks"
 }

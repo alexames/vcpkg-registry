@@ -1,19 +1,21 @@
 vcpkg_from_github(
   OUT_SOURCE_PATH SOURCE_PATH
   REPO alexames/Flicks
-  REF 6d6362fb77e7645a0d45e1ba8a2f6de8bda3bdfa
-  SHA512 d8332871b00338ddbac27a7528667df7b7b3f679f66949e486227ff979904952d92b9de6dc37dbc892d83033b095960c13a7a7736a1a8611b613cb55e049e4bc
-  HEAD_REF 'main'
+  REF 1116d733ff893e223e1bb5cbec14dfef4e2b4a6b
+  SHA512 09ae2036fca90574f9b0e1e4f4574c60a3f64dc5963ab34b34fc1fa5abe4c0ad73171522a4a9c5fc9265b156905b5d3facf259c3c3f78c7c02a1a61ff9507aed
+  HEAD_REF master
 )
 
 vcpkg_configure_cmake(
   SOURCE_PATH "${SOURCE_PATH}"
   PREFER_NINJA
 )
-vcpkg_install_cmake()
-vcpkg_fixup_cmake_targets()
 
-file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
+vcpkg_install_cmake()
+
+vcpkg_fixup_cmake_targets(CONFIG_PATH lib/cmake/${PORT})
+
+file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug")
 
 file(
   INSTALL "${SOURCE_PATH}/LICENSE"
