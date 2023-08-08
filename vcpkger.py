@@ -133,7 +133,7 @@ def createVcPkgJson(filename, portname, version, description, github_repo):
 
 def updateVcPkgJson(filename, version):
   with jsonOpen(filename) as jsonContents:
-    if jsonContents['version-semver']:
+    if 'version-semver' in jsonContents:
       jsonContents['version-semver'] = version
     else:
       jsonContents['version'] = version
