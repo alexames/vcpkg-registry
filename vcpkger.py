@@ -77,7 +77,7 @@ def createPortFileCMake(filename, github_repo, ref, sha, branch):
   REPO {github_repo}
   REF {ref}
   SHA512 {sha}
-  HEAD_REF 'main'
+  HEAD_REF {branch}
 )
 
 vcpkg_configure_cmake(
@@ -225,9 +225,11 @@ def createPort(*,
   createPortFileCMake(portFileCMake, github_repo, commit_hash, sha512, branch)
   createVcPkgJson(vcpkgJson, portname, version, description, github_repo)
 
+  input("Check port file and make any necessary edits.")
+
   # Prep the dummy commit.
   runWithResult(['git', 'add', f'ports/{portname}'])
-  runWithResult(['git', 'commit', '-m', f'[{portname}] new port'])
+  runWithResult(['git', 'commit', '-m', f'[{portname}] New port'])
   baseline = runWithResult(['git', 'rev-parse', f'HEAD:ports/{portname}'])
 
   # Update the version information.
@@ -280,7 +282,7 @@ def updatePort(*,
     port_version_message = f", port version {port_version}"
   else:
     port_version_message = ""
-  runWithResult(['git', 'commit', '-m', f'[{portname}] Updated port to v{version}{port_version_message}'])
+  runWithResult(['git', 'commit', '-m', f'[{portname}] Updated port to version {version}{port_version_message}'])
   baseline = runWithResult(['git', 'rev-parse', f'HEAD:ports/{portname}'])
 
   # Update the version information.
@@ -334,6 +336,12 @@ def printRegistries():
 ################################################################################
 
 
+def getCommitHash(repo):
+  return runWithResult(['git', '-C', repo, 'rev-parse', 'HEAD'])
+
+def getCurrentBranch(repo):
+  return runWithResult(['git', '-C', repo, 'rev-parse', '--abbrev-ref', 'HEAD'])
+
 def parseArguments():
   usage = "usage: %prog [options] arg"
   parser = ArgumentParser(
@@ -355,7 +363,12 @@ def parseArguments():
       help='Bypass errors that can be skipped')
   parser.add_argument(
       '--commit-hash',
+      required=False,
       help='The hash to update to')
+  parser.add_argument(
+      '--local-repo',
+      required=False,
+      help='The local repo to get the hash and branch from')
   parser.add_argument(
       '--github-repo',
       required=False,
@@ -397,14 +410,16 @@ def parseArguments():
 
 def main():
   args = parseArguments()
+  commit_hash = args.commit_hash or getCommitHash(args.local_repo)
+  branch = args.commit_hash or getCurrentBranch(args.local_repo)
   if args.action == 'create':
     errors = createPort(
         registry_path = args.registry_path,
         portname =      args.portname,
-        commit_hash =   args.commit_hash,
+        commit_hash =   commit_hash,
         github_repo =   args.github_repo,
         description =   args.description,
-        branch =        args.branch,
+        branch =        branch,
         version =       args.version,
         github_token =  args.github_token,
         force =         args.force)
@@ -412,9 +427,9 @@ def main():
     errors = updatePort(
         registry_path = args.registry_path,
         portname =      args.portname,
-        commit_hash =   args.commit_hash,
+        commit_hash =   commit_hash,
         github_repo =   args.github_repo,
-        branch =        args.branch,
+        branch =        branch,
         version =       args.version,
         port_version =  args.port_version,
         github_token =  args.github_token,
