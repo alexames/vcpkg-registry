@@ -27,6 +27,10 @@
     "imgui-file-dialog": {
       "baseline": "1.88",
       "port-version": 0
+    },
+    "lua": {
+      "baseline": "5.5.0",
+      "port-version": 0
     }
   }
 }
