@@ -1,9 +1,9 @@
 vcpkg_from_github(
   OUT_SOURCE_PATH SOURCE_PATH
   REPO alexames/targets
-  REF 873cbaca6d01ff4c72bb532ded14b31fe1ddd9c9
-  SHA512 e40916a0eac9a254689f92899d112fad3ae557a9add390fdbc4a7850f50240f3fc4ef07159dae805bf078f1ac65ff848348f03d8a032b3f9397e13a310159744
-  HEAD_REF 873cbaca6d01ff4c72bb532ded14b31fe1ddd9c9
+  REF 7d66a97e05ab0ccf5c855cdc25012e99b518ae5c
+  SHA512 ecbdf247c36bce194b0dd129ccc0a9419b837316c3e6efcf278a894aa6c0107777cd8aa690d959bc5a5b5e0e525b80c06ef11abdeabb35233cd540ca7fcb10ab
+  HEAD_REF 7d66a97e05ab0ccf5c855cdc25012e99b518ae5c
 )
 
 vcpkg_configure_cmake(
