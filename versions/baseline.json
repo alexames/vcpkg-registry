@@ -35,6 +35,10 @@
     "lx": {
       "baseline": "5.5.0.0",
       "port-version": 0
+    },
+    "targets": {
+      "baseline": "0.1.0",
+      "port-version": 0
     }
   }
 }
