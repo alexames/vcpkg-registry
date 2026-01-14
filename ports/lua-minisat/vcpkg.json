@@ -1,0 +1,13 @@
+{
+  "name": "lua-minisat",
+  "version": "0.1.0",
+  "port-version": 0,
+  "description": "Lua bindings for the MiniSat SAT solver",
+  "homepage": "https://github.com/alexames/lua-minisat",
+  "license": "MIT",
+  "dependencies": [
+    "luawrapper",
+    "minisat-master-keying",
+    "targets"
+  ]
+}
