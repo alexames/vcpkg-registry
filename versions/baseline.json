@@ -43,6 +43,10 @@
     "lua-minisat": {
       "baseline": "0.1.0",
       "port-version": 1
+    },
+    "lua-z3": {
+      "baseline": "0.1.0",
+      "port-version": 0
     }
   }
 }
