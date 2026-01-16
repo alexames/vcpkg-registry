@@ -8,11 +8,15 @@ vcpkg_from_github(
 
 vcpkg_cmake_configure(
   SOURCE_PATH "${SOURCE_PATH}"
+  OPTIONS
+    -DLUA_Z3_ENABLE_INSTALL=ON
 )
 
 vcpkg_cmake_install()
-vcpkg_cmake_config_fixup()
 
+# lua-z3 is a Lua module, not a CMake library - no config files to fixup
+# Remove empty directories if they exist
 file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
+file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/share")
 
 vcpkg_install_copyright(FILE_LIST "${SOURCE_PATH}/LICENSE")
