@@ -30,7 +30,7 @@
     },
     "lua": {
       "baseline": "5.5.0",
-      "port-version": 0
+      "port-version": 1
     },
     "lx": {
       "baseline": "5.5.0.0",
