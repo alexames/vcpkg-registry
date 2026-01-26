@@ -1,6 +1,7 @@
 {
   "name": "lua52",
   "version": "5.2.4",
+  "port-version": 1,
   "description": "Lua 5.2 scripting language with CMake build system",
   "homepage": "https://github.com/alexames/lua",
   "dependencies": [
