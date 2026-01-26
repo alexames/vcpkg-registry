@@ -1,16 +1,18 @@
 vcpkg_from_github(
   OUT_SOURCE_PATH SOURCE_PATH
   REPO alexames/lua
-  REF ebf18698a576c7317e074f58d9c124041bd1331f
-  SHA512 475c8d3448c193c8b675f2ea6df6a7ebac6a68e35e3d7ed985d7869f2e776acc7214dece9a2a0ccb088031523dfedabded297d162a85debc5c4fb1cf419e454c
-  HEAD_REF ebf18698a576c7317e074f58d9c124041bd1331f
+  REF 3655b0eef68784d9839429004529ef940deaadfd
+  SHA512 3870a5834f9cf877303fc08c1d807a34de56feba7368257af0ce52c90110e3fbe2876c29cf3fb6a30f1ce7ca3bfa61dc3306b202544c5521cee3cc62693d678b
+  HEAD_REF extensions/5.1/project
 )
 
 vcpkg_cmake_configure(
   SOURCE_PATH "${SOURCE_PATH}"
+  OPTIONS
+    -DLUA_PROJECT_NAME=lua51
 )
 vcpkg_cmake_install()
-vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/lua)
+vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/lua51)
 
 file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
 

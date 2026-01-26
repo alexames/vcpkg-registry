@@ -28,10 +28,6 @@
       "baseline": "1.88",
       "port-version": 0
     },
-    "lua": {
-      "baseline": "5.5.0",
-      "port-version": 2
-    },
     "lx": {
       "baseline": "5.5.0",
       "port-version": 1
@@ -47,6 +43,26 @@
     "lua-z3": {
       "baseline": "0.1.0",
       "port-version": 2
+    },
+    "lua51": {
+      "baseline": "5.1.1",
+      "port-version": 0
+    },
+    "lua52": {
+      "baseline": "5.2.4",
+      "port-version": 0
+    },
+    "lua53": {
+      "baseline": "5.3.6",
+      "port-version": 0
+    },
+    "lua54": {
+      "baseline": "5.4.8",
+      "port-version": 0
+    },
+    "lua55": {
+      "baseline": "5.5.0",
+      "port-version": 0
     }
   }
 }
