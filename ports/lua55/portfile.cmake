@@ -14,7 +14,10 @@ vcpkg_cmake_configure(
 vcpkg_cmake_install()
 vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/lua55)
 
+vcpkg_copy_tools(TOOL_NAMES lua5555 AUTO_CLEAN)
+
 file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
+file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/share")
 
 file(
   INSTALL "${SOURCE_PATH}/LICENSE"
