@@ -46,19 +46,19 @@
     },
     "lua51": {
       "baseline": "5.1.1",
-      "port-version": 2
+      "port-version": 3
     },
     "lua52": {
       "baseline": "5.2.4",
-      "port-version": 2
+      "port-version": 3
     },
     "lua53": {
       "baseline": "5.3.6",
-      "port-version": 2
+      "port-version": 3
     },
     "lua54": {
       "baseline": "5.4.8",
-      "port-version": 2
+      "port-version": 3
     },
     "lua55": {
       "baseline": "5.5.0",
