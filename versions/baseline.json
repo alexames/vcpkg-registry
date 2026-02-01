@@ -63,6 +63,10 @@
     "lua54": {
       "baseline": "5.4.8",
       "port-version": 0
+    },
+    "lua55": {
+      "baseline": "5.5.0",
+      "port-version": 0
     }
   }
 }
