@@ -74,7 +74,7 @@ def errorIfDoesNotExists(path, errors):
 ################################################################################
 
 
-def createPortFileCMake(filename, github_repo, ref, sha, branch, portname):
+def createPortFileCMake(filename, github_repo, ref, sha, branch):
   with safeOpen(filename, 'w') as file:
     file.write(f'''vcpkg_from_github(
   OUT_SOURCE_PATH SOURCE_PATH
@@ -88,7 +88,7 @@ vcpkg_cmake_configure(
   SOURCE_PATH "${{SOURCE_PATH}}"
 )
 vcpkg_cmake_install()
-vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/{portname})
+vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/${{PORT}})
 
 file(REMOVE_RECURSE "${{CURRENT_PACKAGES_DIR}}/debug/include")
 
@@ -282,7 +282,7 @@ def createPort(*,
 
   # Create and update port folder.
   sha512 = generateSHA512(github_repo, commit_hash, github_token)
-  createPortFileCMake(portFileCMake, github_repo, commit_hash, sha512, branch, portname)
+  createPortFileCMake(portFileCMake, github_repo, commit_hash, sha512, branch)
   createVcPkgJson(vcpkgJson, portname, version, description, github_repo)
 
   input("Check port file and make any necessary edits.")
@@ -338,7 +338,7 @@ def updatePort(*,
   if portFileCMake.exists():
     updatePortFileCMake(portFileCMake, github_repo, commit_hash, sha512, branch)
   else:
-    createPortFileCMake(portFileCMake, github_repo, commit_hash, sha512, branch, portname)
+    createPortFileCMake(portFileCMake, github_repo, commit_hash, sha512, branch)
   if vcpkgJson.exists():
     updateVcPkgJson(vcpkgJson, version, port_version)
   else:
@@ -407,8 +407,15 @@ def printRegistries():
 ################################################################################
 
 
-def getCommitHash(repo):
-  return runWithResult(['git', '-C', repo, 'rev-parse', 'HEAD'])
+def getCommitHash(repo, branch='HEAD'):
+  return runWithResult(['git', '-C', repo, 'rev-parse', branch])
+
+def getRemoteCommitHash(github_repo, branch):
+  url = f'https://github.com/{github_repo}'
+  output = runWithResult(['git', 'ls-remote', url, branch])
+  if not output:
+    raise RuntimeError(f'Could not resolve branch {branch} from {url}')
+  return output.split()[0]
 
 def getCurrentBranch(repo):
   return runWithResult(['git', '-C', repo, 'rev-parse', '--abbrev-ref', 'HEAD'])
@@ -462,7 +469,8 @@ def parseArguments():
   parser.add_argument(
       '--github-token',
       required=False,
-      help='GitHub token for API authentication')
+      default=os.environ.get('GITHUB_TOKEN'),
+      help='GitHub token for API authentication (default: GITHUB_TOKEN env var)')
   parser.add_argument(
       '--force',
       action='store_true',
@@ -484,16 +492,21 @@ def main():
       missing.append('--portname (or positional argument)')
     if not args.github_repo:
       missing.append('--github-repo')
-    if not args.commit_hash and not args.local_repo:
-      missing.append('--commit-hash or --local-repo')
+    if not args.commit_hash and not args.local_repo and not args.branch:
+      missing.append('--commit-hash, --local-repo, or --branch')
     if args.action == 'create' and not args.description:
       missing.append('--description')
     if missing:
       print(f'Missing required arguments for {args.action}: {", ".join(missing)}')
       return
 
-  commit_hash = args.commit_hash or getCommitHash(args.local_repo)
-  branch = args.commit_hash or getCurrentBranch(args.local_repo)
+  branch = args.branch or getCurrentBranch(args.local_repo)
+  if args.commit_hash:
+    commit_hash = args.commit_hash
+  elif args.local_repo:
+    commit_hash = getCommitHash(args.local_repo, branch)
+  else:
+    commit_hash = getRemoteCommitHash(args.github_repo, branch)
   if args.action == 'create':
     errors = createPort(
         registry_path = args.registry_path,
