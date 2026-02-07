@@ -75,6 +75,10 @@
     "imgui-color-text-edit": {
       "baseline": "1.0.0",
       "port-version": 0
+    },
+    "vst3sdk": {
+      "baseline": "3.8.0",
+      "port-version": 0
     }
   }
 }
