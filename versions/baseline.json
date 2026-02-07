@@ -71,6 +71,10 @@
     "lx55": {
       "baseline": "5.5.0",
       "port-version": 0
+    },
+    "imgui-color-text-edit": {
+      "baseline": "1.0.0",
+      "port-version": 0
     }
   }
 }
