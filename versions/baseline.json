@@ -79,6 +79,10 @@
     "vst3sdk": {
       "baseline": "3.8.0",
       "port-version": 0
+    },
+    "mathkata": {
+      "baseline": "2.0.0",
+      "port-version": 0
     }
   }
 }

@@ -1,0 +1,9 @@
+{
+  "name": "mathkata",
+  "version": "2.0.0",
+  "description": "A header-only C++ math library for games",
+  "homepage": "https://github.com/alexames/mathkata",
+  "dependencies": [
+    "xsimd"
+  ]
+}
