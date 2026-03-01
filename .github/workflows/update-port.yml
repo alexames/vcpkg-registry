@@ -102,16 +102,10 @@ jobs:
           TAG="${GITHUB_REF#refs/tags/v}"
           echo "version=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Determine registry repo
-        id: registry
-        run: |
-          REPO=$(echo '${{ github.workflow_ref }}' | sed 's|/\.github/.*||')
-          echo "repo=$REPO" >> "$GITHUB_OUTPUT"
-
       - name: Checkout registry
         uses: actions/checkout@v4
         with:
-          repository: ${{ steps.registry.outputs.repo }}
+          repository: alexames/vcpkg-registry
           token: ${{ secrets.registry-token }}
 
       - name: Set up Python
