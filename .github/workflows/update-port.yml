@@ -1,0 +1,146 @@
+# Reusable workflow: automatically update a vcpkg port in this registry.
+#
+# Other repositories call this workflow to update their port whenever a version
+# tag (vX.Y.Z) is pushed. The port must already exist in the registry (created
+# manually with `vcpkger.py create`).
+#
+# ============================================================================
+# Setup
+# ============================================================================
+#
+# 1. Create a fine-grained Personal Access Token with "Contents: Read and
+#    write" permission on this registry repository. If the source repo is
+#    private, the token also needs read access to that repo.
+#
+# 2. Add the PAT as a repository secret named VCPKG_REGISTRY_TOKEN in the
+#    source repository (Settings > Secrets and variables > Actions).
+#
+# 3. Add a workflow file to the source repository (see examples below).
+#
+# ============================================================================
+# Basic example (.github/workflows/update-vcpkg-registry.yml in source repo)
+# ============================================================================
+#
+#   name: Update vcpkg Registry
+#
+#   on:
+#     push:
+#       tags:
+#         - 'v[0-9]+.[0-9]+.[0-9]+*'
+#
+#   jobs:
+#     update-port:
+#       uses: alexames/vcpkg-registry/.github/workflows/update-port.yml@main
+#       secrets:
+#         registry-token: ${{ secrets.VCPKG_REGISTRY_TOKEN }}
+#
+# By default, port-name is the source repo name (lowercased) and branch is
+# the source repo's default branch. Override either with the `with:` block:
+#
+#   jobs:
+#     update-port:
+#       uses: alexames/vcpkg-registry/.github/workflows/update-port.yml@main
+#       with:
+#         port-name: myportname
+#         branch: develop
+#       secrets:
+#         registry-token: ${{ secrets.VCPKG_REGISTRY_TOKEN }}
+#
+# ============================================================================
+# Multiple ports from one repository (e.g. lua-5.3 and lua-5.4)
+# ============================================================================
+#
+# Use separate jobs with `if:` conditions to route tags to the correct port:
+#
+#   jobs:
+#     update-lua-5.3:
+#       if: startsWith(github.ref, 'refs/tags/v5.3')
+#       uses: alexames/vcpkg-registry/.github/workflows/update-port.yml@main
+#       with:
+#         port-name: lua-5.3
+#         branch: '5.3'
+#       secrets:
+#         registry-token: ${{ secrets.VCPKG_REGISTRY_TOKEN }}
+#
+#     update-lua-5.4:
+#       if: startsWith(github.ref, 'refs/tags/v5.4')
+#       uses: alexames/vcpkg-registry/.github/workflows/update-port.yml@main
+#       with:
+#         port-name: lua-5.4
+#         branch: '5.4'
+#       secrets:
+#         registry-token: ${{ secrets.VCPKG_REGISTRY_TOKEN }}
+#
+# Pushing v5.4.7 runs only the update-lua-5.4 job, updating the lua-5.4 port
+# with version 5.4.7 tracking branch 5.4.
+
+name: Update vcpkg Port
+
+on:
+  workflow_call:
+    inputs:
+      port-name:
+        description: 'The port name in the registry (defaults to repo name, lowercased)'
+        required: false
+        type: string
+      branch:
+        description: 'The branch to track (defaults to source repo default branch)'
+        required: false
+        type: string
+    secrets:
+      registry-token:
+        description: 'PAT with write access to this registry repo'
+        required: true
+
+jobs:
+  update-port:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Parse version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          echo "version=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout registry
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.registry-token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine branch
+        id: branch
+        run: |
+          BRANCH="${{ inputs.branch }}"
+          if [ -z "$BRANCH" ]; then
+            BRANCH=$(gh api repos/${{ github.repository }} --jq '.default_branch')
+          fi
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.registry-token }}
+
+      - name: Update port in registry
+        run: |
+          PORT_NAME="${{ inputs.port-name }}"
+          if [ -z "$PORT_NAME" ]; then
+            PORT_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          fi
+          echo "" | python vcpkger.py update "$PORT_NAME" \
+            --github-repo '${{ github.repository }}' \
+            --commit-hash '${{ github.sha }}' \
+            --version '${{ steps.version.outputs.version }}' \
+            --branch '${{ steps.branch.outputs.name }}'
+        env:
+          GITHUB_TOKEN: ${{ secrets.registry-token }}
+
+      - name: Push changes to registry
+        run: git push
