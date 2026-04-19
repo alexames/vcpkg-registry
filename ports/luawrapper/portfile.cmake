@@ -3,9 +3,9 @@ set(VCPKG_BUILD_TYPE release)
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO alexames/luawrapper
-    REF aa23890767290ac3bddd563e847e65c0a27fcb33
-    SHA512 ff6b0109070033832d9966b9e6d6501c5508df7c7866ca35c3ba5b269157a45805b10107fa4fd103248a4535a8be7d40a0d7d62a6b18d93d29a4e04c8b87b0af
-    HEAD_REF experimental
+    REF 1ba586660070d7b33174a2c2ba0f89f09fbe5f13
+    SHA512 c2cc62d1af610b7ce405eb779d5adbc9bfc3114c6c191c39080655ce35c9497e41a216def38ee724e01465f756fb0b6a7e05047bd52fb410c67af78bd2b4330b
+    HEAD_REF master
 )
 
 vcpkg_configure_cmake(
