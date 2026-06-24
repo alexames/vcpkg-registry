@@ -1,6 +1,6 @@
 {
   "name": "lua55",
-  "version": "5.5.0",
+  "version": "5.5.0.1",
   "description": "Lua is a powerful, efficient, lightweight, embeddable scripting language",
   "homepage": "https://github.com/alexames/lua",
   "dependencies": [
