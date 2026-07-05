@@ -1,8 +1,8 @@
 vcpkg_from_github(
   OUT_SOURCE_PATH SOURCE_PATH
   REPO alexames/flatbuffers-request
-  REF b7245606ccb9ddbcf90044cc1ed5843c56cbcfc0
-  SHA512 2baed89ca4ea70355d2aadbc9dbaa41fc21199dfb397869dfbcf377196ed48e389f411b728714abefc19bc9bfa406e990d7e7de1ada5918ee1f0f401cb90e4eb
+  REF 81ce1006e0b1a4df71009bdf4f3a544a75cc5cf8
+  SHA512 3e841f1de04fa8b3961ef2759717ff20a0f89c59458fce5cb1989fa71bae2d67adbf5a3f5eca9d8fd33691ec05cfbd68923520243ea9f1425da3d4ab38fcc765
   HEAD_REF main
 )
 
