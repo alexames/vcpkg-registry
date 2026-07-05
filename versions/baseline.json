@@ -83,6 +83,10 @@
     "mathkata": {
       "baseline": "3.0.0",
       "port-version": 0
+    },
+    "flatbuffers-request": {
+      "baseline": "0.1.0",
+      "port-version": 0
     }
   }
 }
