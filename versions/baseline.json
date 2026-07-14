@@ -87,6 +87,10 @@
     "flatbuffers-request": {
       "baseline": "0.3.0",
       "port-version": 0
+    },
+    "verovio": {
+      "baseline": "6.2.0",
+      "port-version": 0
     }
   }
 }
