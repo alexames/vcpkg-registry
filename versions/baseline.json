@@ -2,47 +2,39 @@
   "default": {
     "beicode": {
       "baseline": "1.0.0",
-      "port-version": 0
+      "port-version": 1
     },
     "flatbuffers": {
       "baseline": "25.12.19",
       "port-version": 0
     },
-    "luawrapper": {
-      "baseline": "0.0.5",
+    "flatbuffers-request": {
+      "baseline": "0.3.0",
       "port-version": 0
     },
     "flicks": {
       "baseline": "0.0.1",
-      "port-version": 0
+      "port-version": 1
     },
-    "stx": {
-      "baseline": "1.0.0",
-      "port-version": 0
-    },
-    "imgui-node-editor": {
+    "imgui-color-text-edit": {
       "baseline": "1.0.0",
       "port-version": 0
     },
     "imgui-file-dialog": {
       "baseline": "1.88",
-      "port-version": 0
+      "port-version": 1
+    },
+    "imgui-node-editor": {
+      "baseline": "1.0.0",
+      "port-version": 1
     },
     "lua": {
       "baseline": "5.5.0",
       "port-version": 2
     },
-    "lx": {
-      "baseline": "5.5.0",
-      "port-version": 1
-    },
-    "targets": {
-      "baseline": "0.11.0",
-      "port-version": 0
-    },
     "lua-minisat": {
       "baseline": "0.1.0",
-      "port-version": 1
+      "port-version": 2
     },
     "lua-z3": {
       "baseline": "0.1.0",
@@ -68,28 +60,36 @@
       "baseline": "5.5.0.1",
       "port-version": 0
     },
+    "luawrapper": {
+      "baseline": "0.0.5",
+      "port-version": 1
+    },
+    "lx": {
+      "baseline": "5.5.0",
+      "port-version": 2
+    },
     "lx55": {
       "baseline": "5.5.0",
-      "port-version": 0
-    },
-    "imgui-color-text-edit": {
-      "baseline": "1.0.0",
-      "port-version": 0
-    },
-    "vst3sdk": {
-      "baseline": "3.8.0",
       "port-version": 0
     },
     "mathkata": {
       "baseline": "3.0.0",
       "port-version": 0
     },
-    "flatbuffers-request": {
-      "baseline": "0.3.0",
-      "port-version": 0
+    "stx": {
+      "baseline": "1.0.0",
+      "port-version": 1
+    },
+    "targets": {
+      "baseline": "0.11.0",
+      "port-version": 1
     },
     "verovio": {
       "baseline": "6.2.0",
+      "port-version": 0
+    },
+    "vst3sdk": {
+      "baseline": "3.8.0",
       "port-version": 0
     }
   }

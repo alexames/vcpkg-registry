@@ -1,6 +1,17 @@
 {
   "name": "imgui-file-dialog",
   "version": "1.88",
+  "port-version": 1,
   "description": "None",
-  "homepage": "https://github.com/aiekick/ImGuiFileDialog"
+  "homepage": "https://github.com/aiekick/ImGuiFileDialog",
+  "dependencies": [
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ]
 }

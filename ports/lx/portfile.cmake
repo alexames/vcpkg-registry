@@ -6,15 +6,14 @@ vcpkg_from_github(
   HEAD_REF d18cc96747a642fcebf6632330fcba11d4c14dd9
 )
 
-vcpkg_configure_cmake(
+vcpkg_cmake_configure(
   SOURCE_PATH "${SOURCE_PATH}"
-  PREFER_NINJA
   OPTIONS
     -DLUA_BUILD_TESTS=FALSE
     -DLUA_PROJECT_NAME=lx
 )
-vcpkg_install_cmake()
-vcpkg_fixup_cmake_targets(CONFIG_PATH lib/cmake/${PORT})
+vcpkg_cmake_install()
+vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/${PORT})
 
 file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
 

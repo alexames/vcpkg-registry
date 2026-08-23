@@ -1,7 +1,7 @@
 {
   "name": "lua-minisat",
   "version": "0.1.0",
-  "port-version": 1,
+  "port-version": 2,
   "description": "Lua bindings for the MiniSat SAT solver",
   "homepage": "https://github.com/alexames/lua-minisat",
   "license": "MIT",
@@ -10,6 +10,14 @@
     "lua",
     "luawrapper",
     "minisat-master-keying",
-    "targets"
+    "targets",
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
   ]
 }

@@ -1,6 +1,17 @@
 {
   "name": "targets",
   "version": "0.11.0",
+  "port-version": 1,
   "description": "Modern CMake build abstraction library with Bazel-like ergonomics",
-  "homepage": "https://github.com/alexames/targets"
+  "homepage": "https://github.com/alexames/targets",
+  "dependencies": [
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ]
 }
