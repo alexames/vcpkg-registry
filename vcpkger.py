@@ -262,7 +262,40 @@ def createPort(*,
                branch,
                version,
                github_token,
-               force):
+               force,
+               interactive):
+  '''Create a new port and record its first version in the version database.
+
+  Writes ports/<portname>/portfile.cmake and vcpkg.json, commits them, then
+  amends that commit with the version database entries that point at the
+  committed port tree. Nothing is pushed.
+
+  Args:
+    registry_path: Path to the registry root holding ports/ and versions/. The
+      git commands run in the process working directory rather than here, so
+      the script must be invoked from that same root.
+    portname: Name of the port directory to create. Must be lowercase.
+    commit_hash: Upstream commit the port builds from, written as REF.
+    github_repo: Upstream repository as 'owner/project'.
+    description: One-line description written into vcpkg.json.
+    branch: Upstream branch written as HEAD_REF.
+    version: Version string written into vcpkg.json and the version database.
+    github_token: Bearer token sent when downloading the source archive to
+      hash. The header goes out unconditionally, so None is sent as the literal
+      string rather than making the request unauthenticated.
+    force: Skip validation entirely, both the lowercase name check and the
+      checks that refuse to overwrite an existing port.
+    interactive: Pause for a human to hand-edit the generated files before they
+      are committed.
+
+  Returns:
+    A list of validation error messages when the port cannot be created, or
+    None once it has been created and committed.
+
+  Raises:
+    RuntimeError: A git command failed.
+    urllib.error.URLError: The source archive could not be downloaded.
+  '''
   print(f'Attempting to create port {portname}...')
 
   portFolder = registry_path/'ports'/portname
@@ -285,7 +318,8 @@ def createPort(*,
   createPortFileCMake(portFileCMake, github_repo, commit_hash, sha512, branch)
   createVcPkgJson(vcpkgJson, portname, version, description, github_repo)
 
-  input("Check port file and make any necessary edits.")
+  if interactive:
+    input('Check port file and make any necessary edits, then press Enter.')
 
   # Prep the dummy commit.
   runWithResult(['git', 'add', f'ports/{portname}'])
@@ -314,8 +348,48 @@ def updatePort(*,
                branch,
                version,
                github_token,
-               force):
+               force,
+               interactive):
+  '''Point an existing port at a new upstream commit and version.
 
+  Rewrites only the REF, SHA512 and HEAD_REF arguments of the port's
+  vcpkg_from_github call, so hand-written build logic in portfile.cmake
+  survives. A port file that has gone missing is regenerated from the template
+  instead, which discards any such hand-written logic. The port is committed,
+  then that commit is amended with the version database entries pointing at the
+  committed port tree. Nothing is pushed.
+
+  Args:
+    registry_path: Path to the registry root holding ports/ and versions/. The
+      git commands run in the process working directory rather than here, so
+      the script must be invoked from that same root.
+    portname: Name of the port to update. Must be lowercase.
+    commit_hash: Upstream commit to move the port to, written as REF.
+    github_repo: Upstream repository as 'owner/project'.
+    description: One-line description, used only when vcpkg.json is missing and
+      has to be regenerated. May be None.
+    branch: Upstream branch written as HEAD_REF.
+    version: Version string to publish. The port version is derived from the
+      existing entries for this version, so republishing a version bumps the
+      port version instead of colliding with it.
+    github_token: Bearer token sent when downloading the source archive to
+      hash. The header goes out unconditionally, so None is sent as the literal
+      string rather than making the request unauthenticated.
+    force: Skip validation entirely, both the lowercase name check and the
+      check that the port already has a version database file.
+    interactive: Pause for a human to hand-edit the updated files before they
+      are committed.
+
+  Returns:
+    A list of validation error messages when the port cannot be updated, or
+    None once it has been updated and committed.
+
+  Raises:
+    RuntimeError: A git command failed.
+    urllib.error.URLError: The source archive could not be downloaded.
+    AttributeError: An existing portfile.cmake holds no vcpkg_from_github call
+      to rewrite.
+  '''
   portFolder = registry_path/'ports'/portname
   portFileCMake = portFolder/'portfile.cmake'
   vcpkgJson = portFolder/'vcpkg.json'
@@ -344,7 +418,8 @@ def updatePort(*,
   else:
     createVcPkgJson(vcpkgJson, portname, version, description or 'None', github_repo, port_version)
 
-  input("Check port file and make any necessary edits.")
+  if interactive:
+    input('Check port file and make any necessary edits, then press Enter.')
 
   # Prep the dummy commit.
   runWithResult(['git', 'add', f'ports/{portname}'])
@@ -476,6 +551,11 @@ def parseArguments():
       action='store_true',
       required=False,
       help='Bypass validation errors and force the operation')
+  parser.add_argument(
+      '--interactive',
+      action='store_true',
+      required=False,
+      help='Pause to hand-edit the generated port files before they are committed')
 
   args = parser.parse_args()
   # parser.print_help()
@@ -500,13 +580,19 @@ def main():
       print(f'Missing required arguments for {args.action}: {", ".join(missing)}')
       return
 
-  branch = args.branch or getCurrentBranch(args.local_repo)
-  if args.commit_hash:
-    commit_hash = args.commit_hash
-  elif args.local_repo:
-    commit_hash = getCommitHash(args.local_repo, branch)
-  else:
-    commit_hash = getRemoteCommitHash(args.github_repo, branch)
+  # Only create and update need an upstream commit; resolving one for list
+  # would reach the network for a repository the user never named.
+  branch = None
+  commit_hash = None
+  if args.action in ('create', 'update'):
+    branch = args.branch or getCurrentBranch(args.local_repo)
+    if args.commit_hash:
+      commit_hash = args.commit_hash
+    elif args.local_repo:
+      commit_hash = getCommitHash(args.local_repo, branch)
+    else:
+      commit_hash = getRemoteCommitHash(args.github_repo, branch)
+
   if args.action == 'create':
     errors = createPort(
         registry_path = args.registry_path,
@@ -517,7 +603,8 @@ def main():
         branch =        branch,
         version =       args.version,
         github_token =  args.github_token,
-        force =         args.force)
+        force =         args.force,
+        interactive =   args.interactive)
   elif args.action == 'update':
     errors = updatePort(
         registry_path = args.registry_path,
@@ -528,7 +615,8 @@ def main():
         branch =        branch,
         version =       args.version,
         github_token =  args.github_token,
-        force =         args.force)
+        force =         args.force,
+        interactive =   args.interactive)
   elif args.action == 'list':
     errors = printRegistries()
   if errors:

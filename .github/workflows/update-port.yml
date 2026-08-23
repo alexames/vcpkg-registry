@@ -135,7 +135,7 @@ jobs:
           if [ -z "$PORT_NAME" ]; then
             PORT_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
           fi
-          echo "" | python vcpkger.py update "$PORT_NAME" \
+          python vcpkger.py update "$PORT_NAME" \
             --github-repo '${{ github.repository }}' \
             --commit-hash '${{ github.sha }}' \
             --version '${{ steps.version.outputs.version }}' \
