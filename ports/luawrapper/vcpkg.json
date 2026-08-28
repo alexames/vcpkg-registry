@@ -1,7 +1,6 @@
 {
   "name": "luawrapper",
-  "version-semver": "0.0.5",
-  "port-version": 1,
+  "version-semver": "0.0.6",
   "description": "A simple C++ wrapper for lua bindings.",
   "homepage": "https://github.com/alexames/luawrapper",
   "license": "MIT",
