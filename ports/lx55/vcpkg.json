@@ -1,6 +1,7 @@
 {
   "name": "lx55",
   "version": "5.5.0",
+  "port-version": 1,
   "description": "Lx is a modified version of the Lua scripting language with vairous extensions",
   "homepage": "https://github.com/alexames/lua",
   "dependencies": [
