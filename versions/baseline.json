@@ -9,7 +9,7 @@
       "port-version": 0
     },
     "flatbuffers-request": {
-      "baseline": "0.3.1",
+      "baseline": "0.4.0",
       "port-version": 0
     },
     "flicks": {
