@@ -1,7 +1,8 @@
 {
   "name": "lua51",
   "version": "5.1.5",
-  "description": "Lua 5.1, the Lua 5.1.5 release, built as C. Each feature is a departure from the stock build, made only when requested.",
+  "port-version": 1,
+  "description": "Lua 5.1, the Lua 5.1.5 release, built as C. Each feature is a departure from the stock build, made only when requested; cpp adds a C++ build beside the C one.",
   "homepage": "https://www.lua.org/",
   "license": "MIT",
   "supports": "!uwp & !ios",
@@ -17,10 +18,10 @@
   ],
   "features": {
     "bitop": {
-      "description": "Builds Lua BitOp 1.0.2's bit library into the library and opens it in luaL_openlibs, as LuaJIT opens its own bit"
+      "description": "Builds Lua BitOp 1.0.2's bit library into each library and opens it in luaL_openlibs, as LuaJIT opens its own bit"
     },
     "cpp": {
-      "description": "Compiles Lua as C++, so a Lua error raises a C++ exception rather than calling longjmp. Unlike the other features it takes something away: the API then has C++ linkage for every consumer of the installed lua51, which must include lua.h without an extern \"C\" around it, and C code cannot link it"
+      "description": "Also builds lua51-cpp (lua51::lua51-cpp), the same library compiled as C++, so a Lua error raises a C++ exception rather than calling longjmp. Its API has C++ linkage. The C library, lua51::lua51, is built and installed as without the feature"
     },
     "int64": {
       "description": "Makes lua_Integer long long on every target, in place of ptrdiff_t, which is 32 bits on a 32-bit target"
@@ -29,7 +30,7 @@
       "description": "Adds the C API calls past Lua 5.1 that LuaJIT 2.1 provides, under its names and signatures, and files package.preload in the registry under _PRELOAD, as LuaJIT does"
     },
     "tools": {
-      "description": "Builds the standalone interpreter, lua51",
+      "description": "Builds the standalone interpreter, lua51. It runs lua51-cpp when cpp is requested, and lua51 otherwise; off Windows it exports the Lua API, for native modules that link no core",
       "supports": "!ios & !android & !emscripten"
     }
   }

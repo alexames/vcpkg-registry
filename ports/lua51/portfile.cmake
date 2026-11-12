@@ -1,5 +1,6 @@
 # Builds the Lua 5.1.5 release. With no feature the library is stock Lua 5.1.5,
-# compiled as C; every feature departs from it, and none is on by default.
+# compiled as C; every feature departs from it, and none is on by default. The
+# cpp feature adds a second library beside it rather than changing it.
 #
 # Update this port by hand: `vcpkger.py update` rewrites the first
 # vcpkg_from_github call as the port's source, and here that call is the
@@ -21,14 +22,10 @@ set(SOURCE_PATH "${RELEASE_PATH}/src")
 
 file(COPY "${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt" DESTINATION "${SOURCE_PATH}")
 
-# The release's lua.hpp wraps the headers in extern "C", which is wrong for a
-# library compiled as C++.
-if("cpp" IN_LIST FEATURES)
-    file(WRITE "${SOURCE_PATH}/lua.hpp"
-        "// lua.hpp\n// Lua header files for C++. This Lua is compiled as C++, so its API has\n// C++ linkage and the headers are included without extern \"C\".\n\n#include \"lua.h\"\n#include \"lualib.h\"\n#include \"lauxlib.h\"\n")
-else()
-    file(COPY "${RELEASE_PATH}/etc/lua.hpp" DESTINATION "${SOURCE_PATH}")
-endif()
+# The release's lua.hpp, which includes the headers inside extern "C", is for
+# the C library; a consumer of the cpp feature's lua51-cpp includes lua.h,
+# lualib.h and lauxlib.h directly.
+file(COPY "${RELEASE_PATH}/etc/lua.hpp" DESTINATION "${SOURCE_PATH}")
 
 set(COPYRIGHT_FILES "${RELEASE_PATH}/COPYRIGHT")
 
@@ -120,7 +117,7 @@ endif()
 
 vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
     FEATURES
-        cpp LUA51_BUILD_AS_CXX
+        cpp LUA51_BUILD_CXX_LIBRARY
         bitop LUA51_WITH_BITOP
         luajit-api LUA51_WITH_LUAJIT_API
         tools LUA51_BUILD_INTERPRETER
@@ -155,12 +152,26 @@ if("cpp" IN_LIST FEATURES)
     file(APPEND "${CURRENT_PACKAGES_DIR}/share/${PORT}/usage"
         [[
 
-The library is compiled as C++, so its API has C++ linkage: include lua.h,
-lauxlib.h and lualib.h without an `extern "C"` around them, or include lua.hpp.
+The cpp feature adds lua51::lua51-cpp, the same Lua compiled as C++, beside
+the C library lua51::lua51:
 
-A Lua error raises a C++ exception. A toolchain that compiles catch blocks
-away turns every Lua error into an abort: on Emscripten, compile and link with
+    target_link_libraries(main PRIVATE lua51::lua51-cpp)
+
+Its API has C++ linkage: include lua.h, lualib.h and lauxlib.h without an
+`extern "C"` around them, and not lua.hpp, which adds one. A Lua error
+raises a C++ exception. A toolchain that compiles catch blocks away turns
+every Lua error into an abort: on Emscripten, compile and link with
 -fwasm-exceptions or -sDISABLE_EXCEPTION_CATCHING=0.
+]])
+endif()
+if("tools" IN_LIST FEATURES)
+    file(APPEND "${CURRENT_PACKAGES_DIR}/share/${PORT}/usage"
+        [[
+
+The interpreter, tools/lua51/lua51, runs lua51-cpp when the cpp feature is
+installed, and lua51 otherwise, so it loads the native modules built against
+that library. Off Windows it exports the whole Lua API, for a module that
+links no core.
 ]])
 endif()
 

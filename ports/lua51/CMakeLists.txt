@@ -1,28 +1,35 @@
-# Builds the Lua 5.1.5 library, and optionally its standalone interpreter, from
-# the release's src/, into which the portfile copies this file. Stands in for
-# the release's own Makefile, which has no install rule for Windows and exports
-# no CMake package.
+# Builds the Lua 5.1.5 library, and optionally a second copy compiled as C++
+# and the standalone interpreter, from the release's src/, into which the
+# portfile copies this file. Stands in for the release's own Makefile, which
+# has no install rule for Windows and exports no CMake package.
+#
+# Targets, exported under the lua51:: namespace:
+#   lua51      The library, compiled as C. Always built.
+#   lua51-cpp  The same sources compiled as C++, so luaconf.h's LUAI_THROW
+#              raises a Lua error as a C++ exception, which runs the
+#              destructors of the C++ frames it unwinds; a C build's longjmp
+#              skips them. Its API has C++ linkage. Built with
+#              LUA51_BUILD_CXX_LIBRARY.
 #
 # Options:
-#   LUA51_BUILD_AS_CXX       Compile every source as C++. luaconf.h's
-#                            LUAI_THROW then raises a Lua error as a C++
-#                            exception, which runs the destructors of the C++
-#                            frames it unwinds; a C build's longjmp skips them.
-#                            The API then has C++ linkage.
-#   LUA51_WITH_BITOP         Build Lua BitOp's bit.c into the library.
-#   LUA51_WITH_LUAJIT_API    Build lextensions.c into the library.
-#   LUA51_BUILD_INTERPRETER  Also build the standalone interpreter, lua51.
+#   LUA51_BUILD_CXX_LIBRARY  Also build lua51-cpp.
+#   LUA51_WITH_BITOP         Build Lua BitOp's bit.c into each library.
+#   LUA51_WITH_LUAJIT_API    Build lextensions.c into each library.
+#   LUA51_BUILD_INTERPRETER  Also build the standalone interpreter, lua51. It
+#                            runs lua51-cpp when that is built, and lua51
+#                            otherwise.
 
-cmake_minimum_required(VERSION 3.20)
+# 3.24 for $<LINK_LIBRARY:WHOLE_ARCHIVE,...>.
+cmake_minimum_required(VERSION 3.24)
 
 project(lua51 VERSION 5.1.5 LANGUAGES C)
 
-option(LUA51_BUILD_AS_CXX "Compile Lua as C++" OFF)
+option(LUA51_BUILD_CXX_LIBRARY "Also build lua51-cpp, Lua compiled as C++" OFF)
 option(LUA51_WITH_BITOP "Build Lua BitOp's bit library into the library" OFF)
 option(LUA51_WITH_LUAJIT_API "Build the LuaJIT 2.1 API additions" OFF)
 option(LUA51_BUILD_INTERPRETER "Build the standalone interpreter" OFF)
 
-if(LUA51_BUILD_AS_CXX)
+if(LUA51_BUILD_CXX_LIBRARY)
   enable_language(CXX)
 endif()
 
@@ -48,41 +55,89 @@ endif()
 if(LUA51_WITH_LUAJIT_API)
   list(APPEND library_sources lextensions.c)
 endif()
-if(LUA51_BUILD_AS_CXX)
-  set_source_files_properties(${library_sources} lua.c
-    PROPERTIES LANGUAGE CXX)
-endif()
+
+# Gives TARGET, a library built from the release's sources, what both
+# libraries share: the headers, the DLL export switch and the POSIX libraries.
+function(lua51_configure_library target)
+  target_include_directories(${target} PUBLIC
+    "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>"
+    "$<INSTALL_INTERFACE:include>"
+  )
+  if(WIN32 AND BUILD_SHARED_LIBS)
+    target_compile_definitions(${target} PUBLIC LUA_BUILD_AS_DLL)
+  endif()
+  if(UNIX)
+    target_link_libraries(${target} PRIVATE ${CMAKE_DL_LIBS})
+    if(LUA51_LIBM)
+      target_link_libraries(${target} PRIVATE m)
+    endif()
+  endif()
+endfunction()
 
 add_library(lua51 ${library_sources})
-target_include_directories(lua51 PUBLIC
-  "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>"
-  "$<INSTALL_INTERFACE:include>"
-)
-if(WIN32 AND BUILD_SHARED_LIBS)
-  target_compile_definitions(lua51 PUBLIC LUA_BUILD_AS_DLL)
-endif()
-if(UNIX)
-  target_link_libraries(lua51 PRIVATE ${CMAKE_DL_LIBS})
-  if(LUA51_LIBM)
-    target_link_libraries(lua51 PRIVATE m)
-  endif()
+lua51_configure_library(lua51)
+set(installed_targets lua51)
+
+# A source file's language is a property of the file, not of the target that
+# compiles it, so the C++ library compiles copies of the sources. A copy
+# still finds the headers on the include path.
+if(LUA51_BUILD_CXX_LIBRARY)
+  set(cxx_source_dir "${PROJECT_BINARY_DIR}/cpp")
+  set(cxx_library_sources "")
+  foreach(source IN LISTS library_sources)
+    configure_file("${PROJECT_SOURCE_DIR}/${source}"
+      "${cxx_source_dir}/${source}" COPYONLY)
+    list(APPEND cxx_library_sources "${cxx_source_dir}/${source}")
+  endforeach()
+  set(cxx_interpreter_source "${cxx_source_dir}/lua.c")
+  configure_file("${PROJECT_SOURCE_DIR}/lua.c" "${cxx_interpreter_source}"
+    COPYONLY)
+  set_source_files_properties(${cxx_library_sources} ${cxx_interpreter_source}
+    PROPERTIES LANGUAGE CXX)
+
+  add_library(lua51-cpp ${cxx_library_sources})
+  lua51_configure_library(lua51-cpp)
+  list(APPEND installed_targets lua51-cpp)
 endif()
 
 install(FILES lua.h luaconf.h lualib.h lauxlib.h lua.hpp DESTINATION include)
-install(TARGETS lua51
+install(TARGETS ${installed_targets}
   EXPORT lua51-targets
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
 )
 
+# The interpreter runs the library a native module built against this port
+# links, so that the module and the interpreter share one Lua core: lua51-cpp
+# where it is built, since a C++ consumer is the reason to build it.
 if(LUA51_BUILD_INTERPRETER)
-  add_executable(lua51-interpreter lua.c)
+  if(LUA51_BUILD_CXX_LIBRARY)
+    add_executable(lua51-interpreter "${cxx_interpreter_source}")
+    set(interpreter_core lua51-cpp)
+  else()
+    add_executable(lua51-interpreter lua.c)
+    set(interpreter_core lua51)
+  endif()
   # Named apart from the library's lua51.pdb, which shares bin with it.
   set_target_properties(lua51-interpreter PROPERTIES
     OUTPUT_NAME lua51
     PDB_NAME lua51-interpreter)
-  target_link_libraries(lua51-interpreter PRIVATE lua51)
+  # Off Windows a native module may link no core, binding its Lua calls to
+  # the process's when it is loaded. A static core is linked whole, since
+  # otherwise only the archive members lua.c calls are kept, and exported: an
+  # ELF executable exports nothing unless told to (-Wl,-E), and a macOS one
+  # exports its globals by default. On Windows the module and the interpreter
+  # each link the core's DLL.
+  if(NOT WIN32)
+    set_target_properties(lua51-interpreter PROPERTIES ENABLE_EXPORTS ON)
+  endif()
+  if(NOT WIN32 AND NOT BUILD_SHARED_LIBS)
+    target_link_libraries(lua51-interpreter PRIVATE
+      "$<LINK_LIBRARY:WHOLE_ARCHIVE,${interpreter_core}>")
+  else()
+    target_link_libraries(lua51-interpreter PRIVATE ${interpreter_core})
+  endif()
   install(TARGETS lua51-interpreter RUNTIME DESTINATION bin)
 endif()
 
