@@ -1,7 +1,7 @@
 {
   "name": "lua51",
   "version": "5.1.5",
-  "port-version": 1,
+  "port-version": 2,
   "description": "Lua 5.1, the Lua 5.1.5 release, built as C. Each feature is a departure from the stock build, made only when requested; cpp adds a C++ build beside the C one.",
   "homepage": "https://www.lua.org/",
   "license": "MIT",
@@ -30,7 +30,7 @@
       "description": "Adds the C API calls past Lua 5.1 that LuaJIT 2.1 provides, under its names and signatures, and files package.preload in the registry under _PRELOAD, as LuaJIT does"
     },
     "tools": {
-      "description": "Builds the standalone interpreter, lua51. It runs lua51-cpp when cpp is requested, and lua51 otherwise; off Windows it exports the Lua API, for native modules that link no core",
+      "description": "Builds the standalone interpreter lua51 on lua51, and with cpp lua51-cpp on lua51-cpp. Off Windows each exports the Lua API, for native modules that link no core",
       "supports": "!ios & !android & !emscripten"
     }
   }

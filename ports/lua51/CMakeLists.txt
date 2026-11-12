@@ -1,6 +1,6 @@
 # Builds the Lua 5.1.5 library, and optionally a second copy compiled as C++
-# and the standalone interpreter, from the release's src/, into which the
-# portfile copies this file. Stands in for the release's own Makefile, which
+# and a standalone interpreter on each, from the release's src/, into which
+# the portfile copies this file. Stands in for the release's own Makefile, which
 # has no install rule for Windows and exports no CMake package.
 #
 # Targets, exported under the lua51:: namespace:
@@ -15,9 +15,9 @@
 #   LUA51_BUILD_CXX_LIBRARY  Also build lua51-cpp.
 #   LUA51_WITH_BITOP         Build Lua BitOp's bit.c into each library.
 #   LUA51_WITH_LUAJIT_API    Build lextensions.c into each library.
-#   LUA51_BUILD_INTERPRETER  Also build the standalone interpreter, lua51. It
-#                            runs lua51-cpp when that is built, and lua51
-#                            otherwise.
+#   LUA51_BUILD_INTERPRETER  Also build the standalone interpreters: lua51,
+#                            which runs lua51, and with LUA51_BUILD_CXX_LIBRARY
+#                            lua51-cpp, which runs lua51-cpp.
 
 # 3.24 for $<LINK_LIBRARY:WHOLE_ARCHIVE,...>.
 cmake_minimum_required(VERSION 3.24)
@@ -108,21 +108,16 @@ install(TARGETS ${installed_targets}
   ARCHIVE DESTINATION lib
 )
 
-# The interpreter runs the library a native module built against this port
-# links, so that the module and the interpreter share one Lua core: lua51-cpp
-# where it is built, since a C++ consumer is the reason to build it.
-if(LUA51_BUILD_INTERPRETER)
-  if(LUA51_BUILD_CXX_LIBRARY)
-    add_executable(lua51-interpreter "${cxx_interpreter_source}")
-    set(interpreter_core lua51-cpp)
-  else()
-    add_executable(lua51-interpreter lua.c)
-    set(interpreter_core lua51)
-  endif()
-  # Named apart from the library's lua51.pdb, which shares bin with it.
-  set_target_properties(lua51-interpreter PROPERTIES
-    OUTPUT_NAME lua51
-    PDB_NAME lua51-interpreter)
+# Adds INTERPRETER, the standalone interpreter built from SOURCE, lua.c or its
+# C++ copy, on CORE, one of the libraries. A native module loads only in the
+# interpreter of the library it was built against: each core is a copy of its
+# own, and the two raise a Lua error differently.
+function(lua51_add_interpreter interpreter source core)
+  add_executable(${interpreter}-interpreter "${source}")
+  # Named apart from the library's PDB, which shares bin with it.
+  set_target_properties(${interpreter}-interpreter PROPERTIES
+    OUTPUT_NAME ${interpreter}
+    PDB_NAME ${interpreter}-interpreter)
   # Off Windows a native module may link no core, binding its Lua calls to
   # the process's when it is loaded. A static core is linked whole, since
   # otherwise only the archive members lua.c calls are kept, and exported: an
@@ -130,15 +125,23 @@ if(LUA51_BUILD_INTERPRETER)
   # exports its globals by default. On Windows the module and the interpreter
   # each link the core's DLL.
   if(NOT WIN32)
-    set_target_properties(lua51-interpreter PROPERTIES ENABLE_EXPORTS ON)
+    set_target_properties(${interpreter}-interpreter PROPERTIES
+      ENABLE_EXPORTS ON)
   endif()
   if(NOT WIN32 AND NOT BUILD_SHARED_LIBS)
-    target_link_libraries(lua51-interpreter PRIVATE
-      "$<LINK_LIBRARY:WHOLE_ARCHIVE,${interpreter_core}>")
+    target_link_libraries(${interpreter}-interpreter PRIVATE
+      "$<LINK_LIBRARY:WHOLE_ARCHIVE,${core}>")
   else()
-    target_link_libraries(lua51-interpreter PRIVATE ${interpreter_core})
+    target_link_libraries(${interpreter}-interpreter PRIVATE ${core})
   endif()
-  install(TARGETS lua51-interpreter RUNTIME DESTINATION bin)
+  install(TARGETS ${interpreter}-interpreter RUNTIME DESTINATION bin)
+endfunction()
+
+if(LUA51_BUILD_INTERPRETER)
+  lua51_add_interpreter(lua51 lua.c lua51)
+  if(LUA51_BUILD_CXX_LIBRARY)
+    lua51_add_interpreter(lua51-cpp "${cxx_interpreter_source}" lua51-cpp)
+  endif()
 endif()
 
 include(CMakePackageConfigHelpers)

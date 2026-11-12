@@ -131,12 +131,18 @@ vcpkg_cmake_configure(
         -DLUA51_BUILD_INTERPRETER=OFF
 )
 vcpkg_cmake_install()
-vcpkg_copy_pdbs()
 vcpkg_cmake_config_fixup(CONFIG_PATH share/lua51)
 
+# Ahead of vcpkg_copy_pdbs, which would put the library's lua51.pdb in bin,
+# where vcpkg_copy_tools takes a PDB named for the lua51 tool.
 if("tools" IN_LIST FEATURES)
-    vcpkg_copy_tools(TOOL_NAMES lua51 AUTO_CLEAN)
+    set(tool_names lua51)
+    if("cpp" IN_LIST FEATURES)
+        list(APPEND tool_names lua51-cpp)
+    endif()
+    vcpkg_copy_tools(TOOL_NAMES ${tool_names} AUTO_CLEAN)
 endif()
+vcpkg_copy_pdbs()
 
 # A consumer that includes the headers without the CMake target, as a native
 # module built by luarocks does, still imports the API from the DLL.
@@ -168,10 +174,10 @@ if("tools" IN_LIST FEATURES)
     file(APPEND "${CURRENT_PACKAGES_DIR}/share/${PORT}/usage"
         [[
 
-The interpreter, tools/lua51/lua51, runs lua51-cpp when the cpp feature is
-installed, and lua51 otherwise, so it loads the native modules built against
-that library. Off Windows it exports the whole Lua API, for a module that
-links no core.
+The interpreter tools/lua51/lua51 runs lua51, and with the cpp feature
+tools/lua51/lua51-cpp runs lua51-cpp. Each loads the native modules built
+against its library. Off Windows each exports the whole Lua API, for a
+module that links no core.
 ]])
 endif()
 
